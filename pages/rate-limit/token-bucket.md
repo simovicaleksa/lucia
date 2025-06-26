@@ -12,46 +12,48 @@ This requires the server to persist its memory across requests and will not work
 
 ```ts
 export class TokenBucketRateLimit<_Key> {
-	public max: number;
-	public refillIntervalSeconds: number;
+  public max: number;
+  public refillIntervalSeconds: number;
 
-	constructor(max: number, refillIntervalSeconds: number) {
-		this.max = max;
-		this.refillIntervalSeconds = refillIntervalSeconds;
-	}
+  constructor(max: number, refillIntervalSeconds: number) {
+    this.max = max;
+    this.refillIntervalSeconds = refillIntervalSeconds;
+  }
 
-	private storage = new Map<_Key, Bucket>();
+  private storage = new Map<_Key, Bucket>();
 
-	public consume(key: _Key, cost: number): boolean {
-		let bucket = this.storage.get(key) ?? null;
-		const now = Date.now();
-		if (bucket === null) {
-			bucket = {
-				count: this.max - cost,
-				refilledAt: now
-			};
-			this.storage.set(key, bucket);
-			return true;
-		}
-		const refill = Math.floor(
-			(now - bucket.refilledAtMilliseconds) / (this.refillIntervalSeconds * 1000)
-		);
-		bucket.count = Math.min(bucket.count + refill, this.max);
-		bucket.refilledAtSeconds =
-			bucket.refilledAtMilliseconds + refill * this.refillIntervalSeconds * 1000;
-		if (bucket.count < cost) {
-			this.storage.set(key, bucket);
-			return false;
-		}
-		bucket.count -= cost;
-		this.storage.set(key, bucket);
-		return true;
-	}
+  public consume(key: _Key, cost: number): boolean {
+    let bucket = this.storage.get(key) ?? null;
+    const now = Date.now();
+    if (bucket === null) {
+      bucket = {
+        count: this.max - cost,
+        refilledAtMilliseconds: now,
+      };
+      this.storage.set(key, bucket);
+      return true;
+    }
+    const refill = Math.floor(
+      (now - bucket.refilledAtMilliseconds) /
+        (this.refillIntervalSeconds * 1000),
+    );
+    bucket.count = Math.min(bucket.count + refill, this.max);
+    bucket.refilledAtMilliseconds =
+      bucket.refilledAtMilliseconds +
+      refill * this.refillIntervalSeconds * 1000;
+    if (bucket.count < cost) {
+      this.storage.set(key, bucket);
+      return false;
+    }
+    bucket.count -= cost;
+    this.storage.set(key, bucket);
+    return true;
+  }
 }
 
 interface Bucket {
-	count: number;
-	refilledAtMilliseconds: number;
+  count: number;
+  refilledAtMilliseconds: number;
 }
 ```
 
